@@ -22,8 +22,8 @@ class MQTTHandler:
         self.db = DatabaseHandler(db_file)
         
         # Maps topics to shared keys
-        self.keys = {}
-
+        self.keys = {} # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
+        
         # Initialize the MQTT client
         self.client = mqtt.Client()
         self.client.on_connect = self._on_connect
@@ -97,9 +97,6 @@ class MQTTHandler:
             else:
                 self._process_decrypted_message(packet.decoded, service_envelope)
 
-            if self.on_message_callback:
-                self.on_message_callback(msg.topic, msg.payload.decode())
-
         except Exception as e:
             print(f"Failed to process message: {e}")
 
@@ -128,24 +125,80 @@ class MQTTHandler:
     
     def _process_decrypted_message(self, decoded_message, envelope):
         """Process the decoded message."""
+        portnum = decoded_message.portnum
 
-    # Database Operations
+        match portnum:
 
-    def save_message(self, timestamp: str, sender: str, message: str):
-        """Save a received message to the database."""
-        self.db.save_message(timestamp, sender, message)
+            case portnums_pb2.TEXT_MESSAGE_APP:
+                msg_id = envelope.packet.id  # Unique message ID
+                timestamp = envelope.packet.rx_time
+                sender = envelope.gateway_id
+                content = decoded_message.payload.decode("utf-8")
+                self.db.save_message(msg_id, timestamp, sender, content)
+                
+                # process_message(mp, text_payload, is_encrypted)
+                if self.on_message_callback:
+                    self.on_message_callback(sender, content)
 
-    def get_message_history(self):
-        """Retrieve the message history from the database."""
-        return self.db.get_message_history()
+            case portnums_pb2.NODEINFO_APP:
+                node_info = mesh_pb2.User()
+                node_info.ParseFromString(decoded_message.payload)
 
-    def save_node_info(self, node_id: str, short_name: str, long_name: str):
-        """Save node information to the database."""
-        self.db.save_node_info(node_id, short_name, long_name)
+                node_id = node_info.id.decode("utf-8")
+                short_name = node_info.short_name.decode("utf-8")
+                long_name = node_info.long_name.decode("utf-8")
 
-    def get_node_list(self):
-        """Retrieve the list of nodes from the database."""
-        return self.db.get_node_list()
+                # Save to database
+                self.db.save_node_info(node_id, short_name, long_name)
+
+                print(f"Node Info: {short_name} ({long_name})")
+
+            case portnums_pb2.POSITION_APP:
+                position = mesh_pb2.Position()
+                position.ParseFromString(decoded_message.payload)
+
+                latitude = position.latitude_i / 1e7
+                longitude = position.longitude_i / 1e7
+                altitude = position.altitude
+                timestamp = position.time
+
+                node_id = envelope.packet.from_
+
+                # Save to database
+                self.db.save_position(node_id, latitude, longitude, altitude, timestamp)
+
+                print(f"Position Report: Node {node_id} at ({latitude}, {longitude}, {altitude})")
+            
+            case portnums_pb2.TELEMETRY_APP:
+                telemetry = mesh_pb2.Telemetry()
+                telemetry.ParseFromString(decoded_message.payload)
+
+                battery_level = telemetry.device_metrics.battery_level
+                temperature = telemetry.environment_metrics.temperature
+                humidity = telemetry.environment_metrics.relative_humidity
+                pressure = telemetry.environment_metrics.barometric_pressure
+
+                node_id = envelope.packet.from_
+
+                # Save to database
+                self.db.save_telemetry(node_id, battery_level, temperature, humidity, pressure)
+
+                print(f"Telemetry: Node {node_id}, Battery: {battery_level}%, Temp: {temperature}C")
+            
+            case portnums_pb2.TRACEROUTE_APP: 
+                traceroute = mesh_pb2.RouteDiscovery()
+                traceroute.ParseFromString(decoded_message.payload)
+
+                route = [node.decode("utf-8") for node in traceroute.route]
+                route_back = [node.decode("utf-8") for node in traceroute.route_back]
+
+                # Save to database
+                self.db.save_traceroute(envelope.packet.from_, route, route_back)
+
+                print(f"Traceroute: {route}, Route Back: {route_back}")
+            
+            case _:
+                print(f"Unhandled portnum: {portnum}")
 
 if __name__ == "__main__":
     # Example usage
@@ -159,7 +212,6 @@ if __name__ == "__main__":
     
     def on_message(topic, message):
         print(f"Received message on {topic}: {message}")
-        mqtt_handler.save_message("2025-01-10 12:00:00", "sender", message)
 
     mqtt_handler.set_message_callback(on_message)
     mqtt_handler.connect()
