@@ -132,7 +132,7 @@ class MQTTHandler:
             case portnums_pb2.TEXT_MESSAGE_APP:
                 msg_id = envelope.packet.id  # Unique message ID
                 timestamp = envelope.packet.rx_time
-                sender = envelope.gateway_id
+                sender = getattr(envelope.packet, "from")
                 content = decoded_message.payload.decode("utf-8")
                 self.db.save_message(msg_id, timestamp, sender, content)
                 
@@ -162,7 +162,7 @@ class MQTTHandler:
                 altitude = position.altitude
                 timestamp = position.time
 
-                node_id = envelope.packet.from_
+                node_id = getattr(envelope.packet, "from")
 
                 # Save to database
                 self.db.save_position(node_id, latitude, longitude, altitude, timestamp)
@@ -178,7 +178,7 @@ class MQTTHandler:
                 humidity = telemetry.environment_metrics.relative_humidity
                 pressure = telemetry.environment_metrics.barometric_pressure
 
-                node_id = envelope.packet.from_
+                node_id = getattr(envelope.packet, "from")
 
                 # Save to database
                 self.db.save_telemetry(node_id, battery_level, temperature, humidity, pressure)
@@ -193,7 +193,7 @@ class MQTTHandler:
                 route_back = [node.decode("utf-8") for node in traceroute.route_back]
 
                 # Save to database
-                self.db.save_traceroute(envelope.packet.from_, route, route_back)
+                self.db.save_traceroute(getattr(envelope.packet, "from"), route, route_back)
 
                 print(f"Traceroute: {route}, Route Back: {route_back}")
             

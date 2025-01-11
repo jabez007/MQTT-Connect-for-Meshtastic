@@ -1,7 +1,6 @@
 import sqlite3
 from typing import List, Tuple
 
-
 class DatabaseHandler:
     """Handles database operations for MQTT Connect."""
 
