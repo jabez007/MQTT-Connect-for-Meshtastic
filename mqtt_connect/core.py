@@ -3,6 +3,7 @@ import base64
 import paho.mqtt.client as mqtt
 from typing import Callable, Optional
 from .database import DatabaseHandler
+from paho.mqtt.client import Client, MQTTMessage
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 try:
@@ -25,7 +26,8 @@ class MQTTHandler:
         self.keys = {} # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
         
         # Initialize the MQTT client
-        self.client = mqtt.Client()
+        self.client = Client(mqtt.CallbackAPIVersion.VERSION2)
+        # Assign callbacks
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
@@ -65,7 +67,7 @@ class MQTTHandler:
         """Publish a message to a given topic."""
         self.client.publish(topic, message)
 
-    def _on_connect(self, client, userdata, flags, rc):
+    def _on_connect(self, client, userdata, flags, rc, properties=None):
         """Internal callback for when the MQTT client connects."""
         if rc == 0:
             if self.on_connect_callback:
@@ -73,11 +75,11 @@ class MQTTHandler:
         else:
             print(f"Failed to connect to {self.broker}, return code {rc}")
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_disconnect(self, client, userdata, rc, properties=None):
         """Internal callback for when the MQTT client disconnects."""
         print(f"Disconnected from {self.broker} with return code {rc}")
 
-    def _on_message(self, client, userdata, msg):
+    def _on_message(self, client, userdata, msg: MQTTMessage):
         """Internal callback for when a message is received."""
         topic = msg.topic
         shared_key = self.keys.get(topic)
