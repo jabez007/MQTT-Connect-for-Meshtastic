@@ -12,7 +12,7 @@ try:
 except ImportError:
     from meshtastic import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2, BROADCAST_NUM
 
-class MQTTHandler:
+class MeshQTTHandler:
     """Handles MQTT operations and provides utility methods for database interactions."""
 
     def __init__(self, broker: str, port: int, username: Optional[str], password: Optional[str], db_file: str):
@@ -32,8 +32,8 @@ class MQTTHandler:
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
-        self.on_message_callback: Optional[Callable[[str, str], None]] = None
         self.on_connect_callback: Optional[Callable[[str], None]] = None
+        self.on_message_callback: Optional[Callable[[str, str], None]] = None
 
     def set_key(self, topic: str, shared_key: str):
         """Set a shared key for a specific topic."""

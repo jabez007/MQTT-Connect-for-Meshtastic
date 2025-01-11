@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from .core import MQTTHandler
+from .core import MeshQTTHandler
 from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2
 
-class TestMQTTHandler(unittest.TestCase):
+class TestMeshQTTHandler(unittest.TestCase):
 
     def setUp(self):
-        self.mqtt_handler = MQTTHandler(
+        self.mqtt_handler = MeshQTTHandler(
             broker="mqtt.test.broker",
             port=1883,
             username="user",
@@ -19,6 +19,7 @@ class TestMQTTHandler(unittest.TestCase):
     @patch("mqtt_connect.core.mqtt.Client")
     def test_connect(self, mock_mqtt_client):
         mock_client_instance = mock_mqtt_client.return_value
+        self.mqtt_handler.client = mock_client_instance
         self.mqtt_handler.connect()
         mock_client_instance.username_pw_set.assert_called_with("user", "pass")
         mock_client_instance.connect.assert_called_with("mqtt.test.broker", 1883, 60)
@@ -27,15 +28,16 @@ class TestMQTTHandler(unittest.TestCase):
     @patch("mqtt_connect.core.mqtt.Client")
     def test_disconnect(self, mock_mqtt_client):
         mock_client_instance = mock_mqtt_client.return_value
+        self.mqtt_handler.client = mock_client_instance
         self.mqtt_handler.disconnect()
-        mock_client_instance.loop_stop.assert_called()
-        mock_client_instance.disconnect.assert_called()
+        mock_client_instance.loop_stop.assert_called_once()
+        mock_client_instance.disconnect.assert_called_once()
 
     def test_set_key(self):
         self.mqtt_handler.set_key("test/topic", "1PG7OiApB1nwvP+rz05pAQ==")
         self.assertEqual(self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ==")
 
-    @patch("mqtt_connect.core.MQTTHandler._decrypt_message")
+    @patch("mqtt_connect.core.MeshQTTHandler._decrypt_message")
     def test_on_message_decrypts_and_processes(self, mock_decrypt_message):
         # Prepare mocks and test data
         mock_envelope = mqtt_pb2.ServiceEnvelope()
