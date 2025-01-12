@@ -52,7 +52,7 @@ class MeshQTTHandler:
         self.on_message_callback: Optional[Callable[[str, str, int], None]] = None
         self.on_nodeinfo_callback: Optional[Callable[[str, str, str], None]] = None
         self.on_position_callback: Optional[
-            Callable[[str, float, float, float], None]
+            Callable[[str, float, float, int], None]
         ] = None
         self.on_telemetry_callback: Optional[
             Callable[[str, float, float, float, float], None]
@@ -76,7 +76,7 @@ class MeshQTTHandler:
         self.on_nodeinfo_callback = callback
 
     def set_position_callback(
-        self, callback: Callable[[str, float, float, float], None]
+        self, callback: Callable[[str, float, float, int], None]
     ):
         """Set a callback to handle incoming position."""
         self.on_position_callback = callback

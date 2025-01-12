@@ -108,7 +108,7 @@ class TestMeshQTTHandler(unittest.TestCase):
             portnum=portnums_pb2.NODEINFO_APP, payload=node_info.SerializeToString()
         )
         mock_envelope = mqtt_pb2.ServiceEnvelope()
-        mock_envelope.packet.id = 12345
+        mock_envelope.packet.id = 987
         mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
         setattr(mock_envelope.packet, "from", 123456)
 
@@ -125,6 +125,40 @@ class TestMeshQTTHandler(unittest.TestCase):
         )
         callback.assert_called_once_with(
             "node123", "ShortName", "LongName"  # Node ID  # Short name  # Long name
+        )
+
+    def test_position_callback(self):
+        # Prepare mocks and test data
+        position = mesh_pb2.Position(
+            latitude_i=int(37.7749 * 1e7),  # Example latitude
+            longitude_i=int(-122.4194 * 1e7),  # Example longitude
+            altitude=30,  # Example altitude
+            time=1673342400,  # Example timestamp
+        )
+        decoded_message = mesh_pb2.Data(
+            portnum=portnums_pb2.POSITION_APP, payload=position.SerializeToString()
+        )
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 987
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
+        setattr(mock_envelope.packet, "from", 123456)
+
+        callback = MagicMock()
+        self.mqtt_handler.set_position_callback(callback)
+        self.mqtt_handler.db.save_position = MagicMock()
+
+        # Act
+        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+
+        # Assert
+        self.mqtt_handler.db.save_position.assert_called_with(
+            123456, 37.7749, -122.4194, 30, 1673342400
+        )
+        callback.assert_called_once_with(
+            123456,  # Node ID
+            37.7749,  # Latitude
+            -122.4194,  # Longitude
+            30,  # Altitude
         )
 
 

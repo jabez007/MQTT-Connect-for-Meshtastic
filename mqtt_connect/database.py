@@ -39,7 +39,7 @@ class DatabaseHandler:
                     node_id TEXT NOT NULL,
                     latitude REAL NOT NULL,
                     longitude REAL NOT NULL,
-                    altitude REAL NOT NULL,
+                    altitude INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
                     FOREIGN KEY(node_id) REFERENCES nodes(node_id)
                 )
@@ -123,7 +123,7 @@ class DatabaseHandler:
         node_id: str,
         latitude: float,
         longitude: float,
-        altitude: float,
+        altitude: int,
         timestamp: int,
     ):
         """Save a node's position report."""
@@ -133,7 +133,7 @@ class DatabaseHandler:
                 (node_id, latitude, longitude, altitude, timestamp),
             )
 
-    def get_positions(self, node_id: str) -> List[Tuple[float, float, float, int]]:
+    def get_positions(self, node_id: str) -> List[Tuple[float, float, int, int]]:
         """Retrieve position reports for a specific node."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
