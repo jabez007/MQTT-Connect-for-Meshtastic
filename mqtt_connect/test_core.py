@@ -42,6 +42,10 @@ class TestMeshQTTHandler(unittest.TestCase):
             self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ=="
         )
 
+    def test_decrypt_message_with_invalid_key(self):
+        result = self.mqtt_handler._decrypt_message(MagicMock(), "invalid_key")
+        self.assertIsNone(result)
+
     @patch("mqtt_connect.core.MeshQTTHandler._decrypt_message")
     def test_on_message_decrypts_and_processes(self, mock_decrypt_message):
         # Prepare mocks and test data
@@ -64,27 +68,64 @@ class TestMeshQTTHandler(unittest.TestCase):
         # Test _on_message
         self.mqtt_handler._process_decrypted_message = MagicMock()
         self.mqtt_handler._on_message(None, None, mock_msg)
-        self.mqtt_handler._process_decrypted_message.assert_called()
+        self.mqtt_handler._process_decrypted_message.assert_called_with(
+            mock_payload, mock_envelope
+        )
 
-    def test_save_message_to_db(self):
-        self.mqtt_handler.db.save_message = MagicMock()
+    def test_text_message_callback(self):
+        # Prepare mocks and test data
+        decoded_message = mesh_pb2.Data(
+            portnum=portnums_pb2.TEXT_MESSAGE_APP, payload=b"Hello, World!"
+        )
         mock_envelope = mqtt_pb2.ServiceEnvelope()
-        mock_envelope.packet.id = 123
+        mock_envelope.packet.id = 987
         mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
         setattr(mock_envelope.packet, "from", 123456)
-        self.mqtt_handler._process_decrypted_message(
-            mesh_pb2.Data(
-                portnum=portnums_pb2.TEXT_MESSAGE_APP, payload=b"Hello, World!"
-            ),
-            mock_envelope,
-        )
+
+        callback = MagicMock()
+        self.mqtt_handler.set_message_callback(callback)
+        self.mqtt_handler.db.save_message = MagicMock()
+
+        # Act
+        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+
+        # Assert
         self.mqtt_handler.db.save_message.assert_called_with(
-            123, 1673342400, 123456, "Hello, World!"
+            987, 1673342400, 123456, "Hello, World!"
+        )
+        callback.assert_called_once_with(
+            123456,  # Sender
+            "Hello, World!",  # Message content
+            1673342400,  # Timestamp
         )
 
-    def test_decrypt_message_with_invalid_key(self):
-        result = self.mqtt_handler._decrypt_message(MagicMock(), "invalid_key")
-        self.assertIsNone(result)
+    def test_nodeinfo_callback(self):
+        # Prepare mocks and test data
+        node_info = mesh_pb2.User(
+            id="node123", short_name="ShortName", long_name="LongName"
+        )
+        decoded_message = mesh_pb2.Data(
+            portnum=portnums_pb2.NODEINFO_APP, payload=node_info.SerializeToString()
+        )
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 12345
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
+        setattr(mock_envelope.packet, "from", 123456)
+
+        callback = MagicMock()
+        self.mqtt_handler.set_nodeinfo_callback(callback)
+        self.mqtt_handler.db.save_node_info = MagicMock()
+
+        # Act
+        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+
+        # Assert
+        self.mqtt_handler.db.save_node_info.assert_called_with(
+            "node123", "ShortName", "LongName"
+        )
+        callback.assert_called_once_with(
+            "node123", "ShortName", "LongName"  # Node ID  # Short name  # Long name
+        )
 
 
 if __name__ == "__main__":
