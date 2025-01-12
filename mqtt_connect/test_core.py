@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from .core import MeshQTTHandler
+
 from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2
+
+from .core import MeshQTTHandler
+
 
 class TestMeshQTTHandler(unittest.TestCase):
 
@@ -11,7 +14,7 @@ class TestMeshQTTHandler(unittest.TestCase):
             port=1883,
             username="user",
             password="pass",
-            db_file=":memory:"  # Use in-memory database for tests
+            db_file=":memory:",  # Use in-memory database for tests
         )
         self.mqtt_handler.set_key("test/topic", "AQ==")
         self.mqtt_handler.db = MagicMock()
@@ -35,14 +38,16 @@ class TestMeshQTTHandler(unittest.TestCase):
 
     def test_set_key(self):
         self.mqtt_handler.set_key("test/topic", "1PG7OiApB1nwvP+rz05pAQ==")
-        self.assertEqual(self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ==")
+        self.assertEqual(
+            self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ=="
+        )
 
     @patch("mqtt_connect.core.MeshQTTHandler._decrypt_message")
     def test_on_message_decrypts_and_processes(self, mock_decrypt_message):
         # Prepare mocks and test data
         mock_envelope = mqtt_pb2.ServiceEnvelope()
         mock_envelope.packet.id = 12345
-        mock_envelope.packet.rx_time = 1673342400 # "2025-01-10 10:00:00"
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
         setattr(mock_envelope.packet, "from", 123456)
         mock_envelope.packet.encrypted = b"encrypted_data"
         #
@@ -63,23 +68,24 @@ class TestMeshQTTHandler(unittest.TestCase):
 
     def test_save_message_to_db(self):
         self.mqtt_handler.db.save_message = MagicMock()
-        mock_packet = MagicMock()
-        mock_packet.id = 123
-        mock_packet.rx_time = "2025-01-10 10:00:00"
-        setattr(mock_packet, "from", "test_sender")
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 123
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
+        setattr(mock_envelope.packet, "from", 123456)
         self.mqtt_handler._process_decrypted_message(
             mesh_pb2.Data(
-                portnum=portnums_pb2.TEXT_MESSAGE_APP,
-                payload=b"Hello, World!"
+                portnum=portnums_pb2.TEXT_MESSAGE_APP, payload=b"Hello, World!"
             ),
-            MagicMock(packet=mock_packet)
+            mock_envelope,
         )
-        self.mqtt_handler.db.save_message.assert_called_with(123, "2025-01-10 10:00:00", "test_sender", "Hello, World!")
+        self.mqtt_handler.db.save_message.assert_called_with(
+            123, 1673342400, 123456, "Hello, World!"
+        )
 
     def test_decrypt_message_with_invalid_key(self):
         result = self.mqtt_handler._decrypt_message(MagicMock(), "invalid_key")
         self.assertIsNone(result)
 
+
 if __name__ == "__main__":
     unittest.main()
-

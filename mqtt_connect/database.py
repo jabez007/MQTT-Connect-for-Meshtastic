@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from typing import List, Tuple
 
@@ -15,8 +16,8 @@ class DatabaseHandler:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS messages (
-                    msg_id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
+                    msg_id INTEGER PRIMARY KEY,
+                    timestamp INTEGER NOT NULL,
                     sender TEXT NOT NULL,
                     content TEXT NOT NULL
                 )
@@ -72,7 +73,7 @@ class DatabaseHandler:
             )
 
     # Message Operations
-    def save_message(self, msg_id: str, timestamp: str, sender: str, content: str):
+    def save_message(self, msg_id: int, timestamp: int, sender: str, content: str):
         """Save a received message."""
         with sqlite3.connect(self.db_file) as conn:
             conn.execute(
@@ -83,7 +84,7 @@ class DatabaseHandler:
                 (msg_id, timestamp, sender, content),
             )
 
-    def get_message_history(self) -> List[Tuple[str, str, str]]:
+    def get_message_history(self) -> List[Tuple[int, int, str, str]]:
         """Retrieve all messages from the database."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
@@ -132,7 +133,7 @@ class DatabaseHandler:
                 (node_id, latitude, longitude, altitude, timestamp),
             )
 
-    def get_positions(self, node_id: str) -> List[Tuple[float, float, float, str]]:
+    def get_positions(self, node_id: str) -> List[Tuple[float, float, float, int]]:
         """Retrieve position reports for a specific node."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
@@ -177,7 +178,7 @@ class DatabaseHandler:
                 (node_id, json.dumps(route), json.dumps(route_back)),
             )
 
-    def get_traceroutes(self, node_id: str) -> List[Tuple[list, list, str]]:
+    def get_traceroutes(self, node_id: str) -> List[Tuple[any, any, str]]:
         """Retrieve traceroute data for a specific node."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
