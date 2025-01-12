@@ -1,30 +1,46 @@
-import json
 import base64
-import paho.mqtt.client as mqtt
 from typing import Callable, Optional
-from .database import DatabaseHandler
-from paho.mqtt.client import Client, MQTTMessage
+
+import paho.mqtt.client as mqtt
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from paho.mqtt.client import Client, MQTTMessage
+
+from .database import DatabaseHandler
+
 try:
-    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
     from meshtastic import BROADCAST_NUM
+    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
 except ImportError:
-    from meshtastic import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2, BROADCAST_NUM
+    from meshtastic import (
+        BROADCAST_NUM,
+        mesh_pb2,
+        mqtt_pb2,
+        portnums_pb2,
+        telemetry_pb2,
+    )
+
 
 class MeshQTTHandler:
     """Handles MQTT operations and provides utility methods for database interactions."""
 
-    def __init__(self, broker: str, port: int, username: Optional[str], password: Optional[str], db_file: str):
+    def __init__(
+        self,
+        broker: str,
+        port: int,
+        username: Optional[str],
+        password: Optional[str],
+        db_file: str,
+    ):
         self.broker = broker
         self.port = port
         self.username = username
         self.password = password
         self.db = DatabaseHandler(db_file)
-        
+
         # Maps topics to shared keys
-        self.keys = {} # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
-        
+        self.keys = {}  # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
+
         # Initialize the MQTT client
         self.client = Client(mqtt.CallbackAPIVersion.VERSION2)
         # Assign callbacks
@@ -33,19 +49,47 @@ class MeshQTTHandler:
         self.client.on_message = self._on_message
 
         self.on_connect_callback: Optional[Callable[[str], None]] = None
-        self.on_message_callback: Optional[Callable[[str, str], None]] = None
+        self.on_message_callback: Optional[Callable[[str, str, int], None]] = None
+        self.on_nodeinfo_callback: Optional[Callable[[str, str, str], None]] = None
+        self.on_position_callback: Optional[
+            Callable[[str, float, float, float], None]
+        ] = None
+        self.on_telemetry_callback: Optional[
+            Callable[[str, float, float, float, float], None]
+        ] = None
+        self.on_traceroute_callback: Optional[Callable[[list, list], None]] = None
 
     def set_key(self, topic: str, shared_key: str):
         """Set a shared key for a specific topic."""
         self.keys[topic] = shared_key
-    
-    def set_message_callback(self, callback: Callable[[str, str], None]):
-        """Set a callback to handle incoming messages."""
-        self.on_message_callback = callback
 
     def set_connect_callback(self, callback: Callable[[str], None]):
         """Set a callback to handle successful connections."""
         self.on_connect_callback = callback
+
+    def set_message_callback(self, callback: Callable[[str, str, int], None]):
+        """Set a callback to handle incoming text message."""
+        self.on_message_callback = callback
+
+    def set_nodeinfo_callback(self, callback: Callable[[str, str, str], None]):
+        """Set a callback to handle incoming node info."""
+        self.on_nodeinfo_callback = callback
+
+    def set_position_callback(
+        self, callback: Callable[[str, float, float, float], None]
+    ):
+        """Set a callback to handle incoming position."""
+        self.on_position_callback = callback
+
+    def set_telemetry_callback(
+        self, callback: Callable[[str, float, float, float, float], None]
+    ):
+        """Set a callback to handle incoming telemetry."""
+        self.on_telemetry_callback = callback
+
+    def set_traceroute_callback(self, callback: Callable[[list, list], None]):
+        """Set a callback to handle incoming traceroute."""
+        self.on_traceroute_callback = callback
 
     def connect(self):
         """Connect to the MQTT broker and start the loop."""
@@ -106,25 +150,27 @@ class MeshQTTHandler:
         """Decrypt the message using shared or public/private keys."""
         try:
             # Convert key to bytes
-            key_bytes = base64.b64decode(key.encode('ascii'))
+            key_bytes = base64.b64decode(key.encode("ascii"))
 
             # Calculate nonce
             nonce_packet_id = getattr(packet, "id").to_bytes(8, "little")
             nonce_from_node = getattr(packet, "from").to_bytes(8, "little")
             nonce = nonce_packet_id + nonce_from_node
 
-            cipher = Cipher(algorithms.AES(key_bytes), modes.CTR(nonce), backend=default_backend())
+            cipher = Cipher(
+                algorithms.AES(key_bytes), modes.CTR(nonce), backend=default_backend()
+            )
             decryptor = cipher.decryptor()
             decrypted_bytes = decryptor.update(packet.encrypted) + decryptor.finalize()
 
             decoded_message = mesh_pb2.Data()
             decoded_message.ParseFromString(decrypted_bytes)
             return decoded_message
-        
+
         except Exception as e:
             print(f"Decryption failed: {e}")
             return None
-    
+
     def _process_decrypted_message(self, decoded_message, envelope):
         """Process the decoded message."""
         portnum = decoded_message.portnum
@@ -136,24 +182,27 @@ class MeshQTTHandler:
                 timestamp = envelope.packet.rx_time
                 sender = getattr(envelope.packet, "from")
                 content = decoded_message.payload.decode("utf-8")
+
+                # Save to database
                 self.db.save_message(msg_id, timestamp, sender, content)
-                
+
                 # process_message(mp, text_payload, is_encrypted)
                 if self.on_message_callback:
-                    self.on_message_callback(sender, content)
+                    self.on_message_callback(sender, content, timestamp)
 
             case portnums_pb2.NODEINFO_APP:
                 node_info = mesh_pb2.User()
                 node_info.ParseFromString(decoded_message.payload)
 
-                node_id = node_info.id.decode("utf-8")
-                short_name = node_info.short_name.decode("utf-8")
-                long_name = node_info.long_name.decode("utf-8")
+                node_id = node_info.id
+                short_name = node_info.short_name
+                long_name = node_info.long_name
 
                 # Save to database
                 self.db.save_node_info(node_id, short_name, long_name)
 
-                print(f"Node Info: {short_name} ({long_name})")
+                if self.on_nodeinfo_callback:
+                    self.on_nodeinfo_callback(node_id, short_name, long_name)
 
             case portnums_pb2.POSITION_APP:
                 position = mesh_pb2.Position()
@@ -169,10 +218,12 @@ class MeshQTTHandler:
                 # Save to database
                 self.db.save_position(node_id, latitude, longitude, altitude, timestamp)
 
-                print(f"Position Report: Node {node_id} at ({latitude}, {longitude}, {altitude})")
-            
+                # Trigger the position callback
+                if self.on_position_callback:
+                    self.on_position_callback(node_id, latitude, longitude, altitude)
+
             case portnums_pb2.TELEMETRY_APP:
-                telemetry = mesh_pb2.Telemetry()
+                telemetry = telemetry_pb2.Telemetry()
                 telemetry.ParseFromString(decoded_message.payload)
 
                 battery_level = telemetry.device_metrics.battery_level
@@ -183,45 +234,55 @@ class MeshQTTHandler:
                 node_id = getattr(envelope.packet, "from")
 
                 # Save to database
-                self.db.save_telemetry(node_id, battery_level, temperature, humidity, pressure)
+                self.db.save_telemetry(
+                    node_id, battery_level, temperature, humidity, pressure
+                )
 
-                print(f"Telemetry: Node {node_id}, Battery: {battery_level}%, Temp: {temperature}C")
-            
-            case portnums_pb2.TRACEROUTE_APP: 
+                # Trigger the telemetry callback
+                if self.on_telemetry_callback:
+                    self.on_telemetry_callback(
+                        node_id, battery_level, temperature, humidity, pressure
+                    )
+
+            case portnums_pb2.TRACEROUTE_APP:
                 traceroute = mesh_pb2.RouteDiscovery()
                 traceroute.ParseFromString(decoded_message.payload)
 
-                route = [node.decode("utf-8") for node in traceroute.route]
-                route_back = [node.decode("utf-8") for node in traceroute.route_back]
+                route = [(node, snr) for node, snr in zip(traceroute.route, traceroute.snr_towards)]
+                route_back = [(node, snr) for node, snr in zip(traceroute.route_back, traceroute.snr_back)]
 
                 # Save to database
-                self.db.save_traceroute(getattr(envelope.packet, "from"), route, route_back)
+                self.db.save_traceroute(
+                    getattr(envelope.packet, "from"), route, route_back
+                )
 
-                print(f"Traceroute: {route}, Route Back: {route_back}")
-            
+                # Trigger the traceroute callback
+                if self.on_traceroute_callback:
+                    self.on_traceroute_callback(route, route_back)
+
             case _:
                 print(f"Unhandled portnum: {portnum}")
 
+
 if __name__ == "__main__":
     # Example usage
-    mqtt_handler = MQTTHandler(
+    mqtt_handler = MeshQTTHandler(
         broker="mqtt.meshtastic.org",
         port=1883,
-        username="user",
-        password="pass",
+        username="meshdev",
+        password="large4cats",
         db_file="mqtt_data.db",
     )
-    
-    def on_message(topic, message):
-        print(f"Received message on {topic}: {message}")
+
+    def on_message(sender, content, timestamp):
+        print(f"[{timestamp}]Received message from {sender}: {content}")
 
     mqtt_handler.set_message_callback(on_message)
     mqtt_handler.connect()
-    mqtt_handler.subscribe("test/topic")
+    mqtt_handler.subscribe("msh/US")
 
     try:
         while True:
             pass  # Keep the script running to process messages
     except KeyboardInterrupt:
         mqtt_handler.disconnect()
-

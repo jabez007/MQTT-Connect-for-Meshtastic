@@ -1,6 +1,7 @@
 import sqlite3
 from typing import List, Tuple
 
+
 class DatabaseHandler:
     """Handles database operations for MQTT Connect."""
 
@@ -14,7 +15,7 @@ class DatabaseHandler:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS messages (
-                    msg_id INTEGER PRIMARY KEY,
+                    msg_id TEXT PRIMARY KEY,
                     timestamp TEXT NOT NULL,
                     sender TEXT NOT NULL,
                     content TEXT NOT NULL
@@ -38,7 +39,7 @@ class DatabaseHandler:
                     latitude REAL NOT NULL,
                     longitude REAL NOT NULL,
                     altitude REAL NOT NULL,
-                    timestamp TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL,
                     FOREIGN KEY(node_id) REFERENCES nodes(node_id)
                 )
                 """
@@ -71,7 +72,7 @@ class DatabaseHandler:
             )
 
     # Message Operations
-    def save_message(self, timestamp: str, sender: str, content: str):
+    def save_message(self, msg_id: str, timestamp: str, sender: str, content: str):
         """Save a received message."""
         with sqlite3.connect(self.db_file) as conn:
             conn.execute(
@@ -116,7 +117,14 @@ class DatabaseHandler:
             conn.execute("DELETE FROM nodes")
 
     # Position Operations
-    def save_position(self, node_id: str, latitude: float, longitude: float, altitude: float, timestamp: str):
+    def save_position(
+        self,
+        node_id: str,
+        latitude: float,
+        longitude: float,
+        altitude: float,
+        timestamp: int,
+    ):
         """Save a node's position report."""
         with sqlite3.connect(self.db_file) as conn:
             conn.execute(
@@ -129,12 +137,19 @@ class DatabaseHandler:
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
                 "SELECT latitude, longitude, altitude, timestamp FROM positions WHERE node_id = ? ORDER BY timestamp DESC",
-                (node_id,)
+                (node_id,),
             )
             return cursor.fetchall()
 
     # Telemetry Operations
-    def save_telemetry(self, node_id: str, battery: float, temperature: float, humidity: float, pressure: float):
+    def save_telemetry(
+        self,
+        node_id: str,
+        battery: float,
+        temperature: float,
+        humidity: float,
+        pressure: float,
+    ):
         """Save telemetry data for a node."""
         with sqlite3.connect(self.db_file) as conn:
             conn.execute(
@@ -142,12 +157,14 @@ class DatabaseHandler:
                 (node_id, battery, temperature, humidity, pressure),
             )
 
-    def get_telemetry(self, node_id: str) -> List[Tuple[float, float, float, float, str]]:
+    def get_telemetry(
+        self, node_id: str
+    ) -> List[Tuple[float, float, float, float, str]]:
         """Retrieve telemetry data for a specific node."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
                 "SELECT battery, temperature, humidity, pressure, timestamp FROM telemetry WHERE node_id = ? ORDER BY timestamp DESC",
-                (node_id,)
+                (node_id,),
             )
             return cursor.fetchall()
 
@@ -165,7 +182,7 @@ class DatabaseHandler:
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
                 "SELECT route, route_back, timestamp FROM traceroutes WHERE node_id = ? ORDER BY timestamp DESC",
-                (node_id,)
+                (node_id,),
             )
             return [
                 (json.loads(row[0]), json.loads(row[1]) if row[1] else None, row[2])
