@@ -1,6 +1,9 @@
+import base64
 import unittest
 from unittest.mock import MagicMock, patch
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
 
 from .core import MeshQTTHandler
@@ -41,6 +44,41 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.assertEqual(
             self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ=="
         )
+
+    def test_decrypt_message_success(self):
+        # Simulate key
+        shared_key = "1PG7OiApB1nwvP+rz05pAQ=="  # Base64-encoded key
+        key_bytes = base64.b64decode(shared_key.encode("ascii"))
+
+        # Generate nonce
+        nonce = (987).to_bytes(8, "little") + (123456).to_bytes(8, "little")
+
+        # Prepare mocks and test data
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 987
+        setattr(mock_envelope.packet, "from", 123456)
+
+        # Simulate decrypted message
+        decrypted_data = mesh_pb2.Data(
+            portnum=portnums_pb2.TEXT_MESSAGE_APP, payload=b"Hello, World!"
+        )
+        decrypted_bytes = decrypted_data.SerializeToString()
+
+        # Simulate encrypted data
+        cipher = Cipher(
+            algorithms.AES(key_bytes), modes.CTR(nonce), backend=default_backend()
+        )
+        encryptor = cipher.encryptor()
+        encrypted_data = encryptor.update(decrypted_bytes) + encryptor.finalize()
+        mock_envelope.packet.encrypted = encrypted_data
+
+        # Act
+        result = self.mqtt_handler._decrypt_message(mock_envelope.packet, shared_key)
+
+        # Assert
+        self.assertIsNotNone(result)
+        self.assertEqual(result.portnum, portnums_pb2.TEXT_MESSAGE_APP)
+        self.assertEqual(result.payload.decode("utf-8"), "Hello, World!")
 
     def test_decrypt_message_with_invalid_key(self):
         result = self.mqtt_handler._decrypt_message(MagicMock(), "invalid_key")
