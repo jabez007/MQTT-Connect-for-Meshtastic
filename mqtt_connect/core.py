@@ -55,7 +55,7 @@ class MeshQTTHandler:
             Callable[[str, float, float, int], None]
         ] = None
         self.on_telemetry_callback: Optional[
-            Callable[[str, float, float, float, float], None]
+            Callable[[str, int | None, float | None, float | None, float | None], None]
         ] = None
         self.on_traceroute_callback: Optional[Callable[[list, list], None]] = None
 
@@ -82,7 +82,7 @@ class MeshQTTHandler:
         self.on_position_callback = callback
 
     def set_telemetry_callback(
-        self, callback: Callable[[str, float, float, float, float], None]
+        self, callback: Callable[[str, int | None, float | None, float | None, float | None], None]
     ):
         """Set a callback to handle incoming telemetry."""
         self.on_telemetry_callback = callback
@@ -223,13 +223,27 @@ class MeshQTTHandler:
                     self.on_position_callback(node_id, latitude, longitude, altitude)
 
             case portnums_pb2.TELEMETRY_APP:
+                # Device Metrics
+                battery_level = None
+                # Environment Metrics
+                temperature = None
+                humidity = None
+                pressure = None
+
                 telemetry = telemetry_pb2.Telemetry()
                 telemetry.ParseFromString(decoded_message.payload)
 
-                battery_level = telemetry.device_metrics.battery_level
-                temperature = telemetry.environment_metrics.temperature
-                humidity = telemetry.environment_metrics.relative_humidity
-                pressure = telemetry.environment_metrics.barometric_pressure
+                telemetrytype = telemetry.WhichOneof("variant")
+
+                match telemetrytype:
+                    case "device_metrics":
+                        battery_level = telemetry.device_metrics.battery_level
+                    case "environment_metrics":
+                        temperature = telemetry.environment_metrics.temperature
+                        humidity = telemetry.environment_metrics.relative_humidity
+                        pressure = telemetry.environment_metrics.barometric_pressure
+                    case _:
+                        print(f"Unhandled telemetry: {telemetrytype}")
 
                 node_id = getattr(envelope.packet, "from")
 

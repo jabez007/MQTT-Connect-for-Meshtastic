@@ -50,7 +50,7 @@ class DatabaseHandler:
                 CREATE TABLE IF NOT EXISTS telemetry (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     node_id TEXT NOT NULL,
-                    battery REAL,
+                    battery INTEGER,
                     temperature REAL,
                     humidity REAL,
                     pressure REAL,
@@ -146,10 +146,10 @@ class DatabaseHandler:
     def save_telemetry(
         self,
         node_id: str,
-        battery: float,
-        temperature: float,
-        humidity: float,
-        pressure: float,
+        battery: int | None,
+        temperature: float | None,
+        humidity: float | None,
+        pressure: float | None,
     ):
         """Save telemetry data for a node."""
         with sqlite3.connect(self.db_file) as conn:
@@ -160,7 +160,7 @@ class DatabaseHandler:
 
     def get_telemetry(
         self, node_id: str
-    ) -> List[Tuple[float, float, float, float, str]]:
+    ) -> List[Tuple[int | None, float | None, float | None, float | None, str]]:
         """Retrieve telemetry data for a specific node."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(

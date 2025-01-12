@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2
+from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
 
 from .core import MeshQTTHandler
 
@@ -159,6 +159,72 @@ class TestMeshQTTHandler(unittest.TestCase):
             37.7749,  # Latitude
             -122.4194,  # Longitude
             30,  # Altitude
+        )
+
+    def test_device_telemetry_callback(self):
+        # Prepare mocks and test data
+        telemetry = telemetry_pb2.Telemetry()
+        telemetry.device_metrics.battery_level = 30  # Example battery_level
+
+        decoded_message = mesh_pb2.Data(
+            portnum=portnums_pb2.TELEMETRY_APP, payload=telemetry.SerializeToString()
+        )
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 987
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
+        setattr(mock_envelope.packet, "from", 123456)
+
+        callback = MagicMock()
+        self.mqtt_handler.set_telemetry_callback(callback)
+        self.mqtt_handler.db.save_telemetry = MagicMock()
+
+        # Act
+        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+
+        # Assert
+        self.mqtt_handler.db.save_telemetry.assert_called_with(
+            123456, 30, None, None, None
+        )
+        callback.assert_called_once_with(
+            123456,  # Node ID
+            30,  # Battery level
+            None,  # Temperature
+            None,  # Humidity
+            None,  # Pressure
+        )
+
+    def test_environment_telemetry_callback(self):
+        # Prepare mocks and test data
+        telemetry = telemetry_pb2.Telemetry()
+        telemetry.environment_metrics.temperature = 22.5  # Example temperature
+        telemetry.environment_metrics.relative_humidity = 60.0  # Example humidity
+        telemetry.environment_metrics.barometric_pressure = 1013.25  # Example pressure
+
+        decoded_message = mesh_pb2.Data(
+            portnum=portnums_pb2.TELEMETRY_APP, payload=telemetry.SerializeToString()
+        )
+        mock_envelope = mqtt_pb2.ServiceEnvelope()
+        mock_envelope.packet.id = 987
+        mock_envelope.packet.rx_time = 1673342400  # "2025-01-10 10:00:00"
+        setattr(mock_envelope.packet, "from", 123456)
+
+        callback = MagicMock()
+        self.mqtt_handler.set_telemetry_callback(callback)
+        self.mqtt_handler.db.save_telemetry = MagicMock()
+
+        # Act
+        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+
+        # Assert
+        self.mqtt_handler.db.save_telemetry.assert_called_with(
+            123456, None, 22.5, 60.0, 1013.25
+        )
+        callback.assert_called_once_with(
+            123456,  # Node ID
+            None,  # Battery level
+            22.5,  # Temperature
+            60.0,  # Humidity
+            1013.25,  # Pressure
         )
 
 
