@@ -40,9 +40,16 @@ class TestMeshQTTHandler(unittest.TestCase):
         mock_client_instance.disconnect.assert_called_once()
 
     def test_set_key(self):
-        self.mqtt_handler.set_key("test/topic", "1PG7OiApB1nwvP+rz05pAQ==")
+        self.mqtt_handler.set_key("LongFast", "1PG7OiApB1nwvP+rz05pAQ==")
+        self.assertEqual(self.mqtt_handler.keys["LongFast"], "1PG7OiApB1nwvP+rz05pAQ==")
+
+    def test_get_key(self):
+        self.mqtt_handler.set_key("LongFast", "AQ==")
         self.assertEqual(
-            self.mqtt_handler.keys["test/topic"], "1PG7OiApB1nwvP+rz05pAQ=="
+            self.mqtt_handler._get_key(
+                self.mqtt_handler.root_topic + "/2/e/LongFast/!abcd1234"
+            ),
+            "AQ==",
         )
 
     def test_decrypt_message_success(self):

@@ -20,7 +20,8 @@ except ImportError:
 def _on_message(self, client, userdata, msg: MQTTMessage):
     """Internal callback for when a message is received."""
     topic = msg.topic
-    shared_key = self.keys.get(topic)
+    # TODO: Get Channel from topic
+    shared_key = self._get_key(topic)
     try:
         service_envelope = mqtt_pb2.ServiceEnvelope()
         service_envelope.ParseFromString(msg.payload)

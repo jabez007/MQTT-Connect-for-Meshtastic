@@ -1,4 +1,5 @@
 import random
+import re
 from typing import Callable, Dict, Optional
 
 import paho.mqtt.client as mqtt
@@ -33,7 +34,7 @@ class MeshQTTHandler:
         #
         self.node_id = "!" + hex(random.getrandbits(32)).lstrip("0x")
 
-        # Maps topics to shared keys
+        # Maps channels to shared keys
         self.keys: Dict[str, Optional[str]] = (
             {}
         )  # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
@@ -56,9 +57,16 @@ class MeshQTTHandler:
         ] = None
         self.on_traceroute_callback: Optional[Callable[[list, list], None]] = None
 
-    def set_key(self, topic: str, shared_key: str):
-        """Set a shared key for a specific topic."""
-        self.keys[topic] = shared_key
+    def set_key(self, channel_name: str, shared_key: Optional[str]):
+        """Set a shared key for a specific channel."""
+        self.keys[channel_name] = shared_key
+
+    def _get_key(self, topic: str) -> Optional[str]:
+        """Get the shared key for a specific topic"""
+        match = re.search(self.root_topic + "/2/e/([0-9a-zA-Z_]+)/*", topic)
+        if match:
+            channel = match.group(1)
+            return self.keys[channel]
 
     def set_connect_callback(self, callback: Callable[[str], None]):
         """Set a callback to handle successful connections."""
@@ -103,8 +111,8 @@ class MeshQTTHandler:
 
     def subscribe(self, channel_name: str, shared_key: Optional[str] = None):
         """Subscribe to a given channel."""
-        topic = self.root_topic + "/2/e/" + channel_name
-        self.keys[topic] = shared_key
+        self.set_key(channel_name, shared_key)
+        topic = self.root_topic + "/2/e/" + channel_name + "/#"
         self.client.subscribe(topic)
 
     def publish(self, topic: str, message: str):
