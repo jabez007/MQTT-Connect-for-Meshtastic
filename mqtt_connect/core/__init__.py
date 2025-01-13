@@ -1,3 +1,4 @@
+import random
 from typing import Callable, Optional
 
 import paho.mqtt.client as mqtt
@@ -22,6 +23,9 @@ class MeshQTTHandler:
         self.username = username
         self.password = password
         self.db = DatabaseHandler(db_file)
+
+        #
+        self.node_id = "!" + hex(random.getrandbits(32)).lstrip("0x")
 
         # Maps topics to shared keys
         self.keys = {}  # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
