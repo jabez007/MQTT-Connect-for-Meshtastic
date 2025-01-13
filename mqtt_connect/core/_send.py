@@ -1,17 +1,24 @@
+import base64
 import random
 
-from .utils import generate_hash
+from .utils import encrypt_message, generate_hash
 
 try:
     from meshtastic import BROADCAST_NUM
-    from meshtastic.protobuf import (mesh_pb2, mqtt_pb2, portnums_pb2,
-                                     telemetry_pb2)
+    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
 except ImportError:
-    from meshtastic import (BROADCAST_NUM, mesh_pb2, mqtt_pb2, portnums_pb2,
-                            telemetry_pb2)
+    from meshtastic import (
+        BROADCAST_NUM,
+        mesh_pb2,
+        mqtt_pb2,
+        portnums_pb2,
+        telemetry_pb2,
+    )
 
 
-def _send_ack(self, packet_id: int, sender_id: int, channel: str = "LongFast"):
+def _send_ack(
+    self, packet_id: int, sender_id: int, channel: str = "LongFast", key: str = "AQ=="
+):
     """
     Send an acknowledgment (ACK) for a received message.
     Args:
@@ -25,14 +32,14 @@ def _send_ack(self, packet_id: int, sender_id: int, channel: str = "LongFast"):
 
     service_envelope = mqtt_pb2.ServiceEnvelope()
     service_envelope.packet.CopyFrom(
-        self._generate_mesh_packet(sender_id, ack_message, channel)
+        self._generate_mesh_packet(sender_id, ack_message, channel, key)
     )
     service_envelope.channel_id = channel
     service_envelope.gateway_id = self.node_id
 
     payload = service_envelope.SerializeToString()
     # set_topic()
-    self.publish(publish_topic, payload)
+    self.publish("publish_topic", payload)
 
 
 def _generate_mesh_packet(
@@ -40,7 +47,7 @@ def _generate_mesh_packet(
     destination_id: int,
     meshage,
     channel: str = "LongFast",
-    key: str | None = None,
+    key: str = "AQ==",
 ) -> mesh_pb2.MeshPacket:
     """Create a packet to send out over the mesh."""
 
@@ -55,6 +62,10 @@ def _generate_mesh_packet(
     if key and not key.isspace():
         mesh_packet.decoded.CopyFrom(meshage)
     else:
-        mesh_packet.encrypted = encrypt_message(channel, key, mesh_packet, meshage)
+        mesh_packet.encrypted = self._encrypt_message(mesh_packet, key, meshage)
 
     return mesh_packet
+
+
+def _encrypt_message(self, packet: mesh_pb2.MeshPacket, key: str, meshage):
+    return encrypt_message(packet, key, meshage)

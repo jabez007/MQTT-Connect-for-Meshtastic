@@ -1,16 +1,20 @@
 import base64
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from paho.mqtt.client import MQTTMessage
+
+from .utils import decrypt_message
 
 try:
     from meshtastic import BROADCAST_NUM
-    from meshtastic.protobuf import (mesh_pb2, mqtt_pb2, portnums_pb2,
-                                     telemetry_pb2)
+    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
 except ImportError:
-    from meshtastic import (BROADCAST_NUM, mesh_pb2, mqtt_pb2, portnums_pb2,
-                            telemetry_pb2)
+    from meshtastic import (
+        BROADCAST_NUM,
+        mesh_pb2,
+        mqtt_pb2,
+        portnums_pb2,
+        telemetry_pb2,
+    )
 
 
 def _on_message(self, client, userdata, msg: MQTTMessage):
@@ -37,30 +41,8 @@ def _on_message(self, client, userdata, msg: MQTTMessage):
         print(f"Failed to process message: {e}")
 
 
-def _decrypt_message(self, packet, key):
-    """Decrypt the message using shared or public/private keys."""
-    try:
-        # Convert key to bytes
-        key_bytes = base64.b64decode(key.encode("ascii"))
-
-        # Calculate nonce
-        nonce_packet_id = getattr(packet, "id").to_bytes(8, "little")
-        nonce_from_node = getattr(packet, "from").to_bytes(8, "little")
-        nonce = nonce_packet_id + nonce_from_node
-
-        cipher = Cipher(
-            algorithms.AES(key_bytes), modes.CTR(nonce), backend=default_backend()
-        )
-        decryptor = cipher.decryptor()
-        decrypted_bytes = decryptor.update(packet.encrypted) + decryptor.finalize()
-
-        decoded_message = mesh_pb2.Data()
-        decoded_message.ParseFromString(decrypted_bytes)
-        return decoded_message
-
-    except Exception as e:
-        print(f"Decryption failed: {e}")
-        return None
+def _decrypt_message(self, packet: mesh_pb2.MeshPacket, key: str):
+    return decrypt_message(packet, key)
 
 
 def _process_decrypted_message(self, decoded_message, envelope):
