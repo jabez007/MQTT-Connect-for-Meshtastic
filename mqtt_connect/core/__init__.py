@@ -1,5 +1,5 @@
 import random
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import Client
@@ -13,22 +13,30 @@ class MeshQTTHandler:
     def __init__(
         self,
         broker: str,
-        port: int,
+        port: Optional[int],
         username: Optional[str],
         password: Optional[str],
-        db_file: str,
+        root_topic: str = "msh/US",
+        db_file: Optional[str] = None,
     ):
         self.broker = broker
-        self.port = port
+        self.port = port if port is not None else 1883
         self.username = username
         self.password = password
-        self.db = DatabaseHandler(db_file)
+        self.root_topic = root_topic
+        self.db = DatabaseHandler(
+            db_file
+            if db_file is not None
+            else (self.broker + "_" + self.root_topic.replace("/", ".") + ".db")
+        )
 
         #
         self.node_id = "!" + hex(random.getrandbits(32)).lstrip("0x")
 
         # Maps topics to shared keys
-        self.keys = {}  # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
+        self.keys: Dict[str, Optional[str]] = (
+            {}
+        )  # default key is "AQ==" or "1PG7OiApB1nwvP+rz05pAQ=="
 
         # Initialize the MQTT client
         self.client = Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -93,8 +101,10 @@ class MeshQTTHandler:
         self.client.loop_stop()
         self.client.disconnect()
 
-    def subscribe(self, topic: str):
-        """Subscribe to a given topic."""
+    def subscribe(self, channel_name: str, shared_key: Optional[str] = None):
+        """Subscribe to a given channel."""
+        topic = self.root_topic + "/2/e/" + channel_name
+        self.keys[topic] = shared_key
         self.client.subscribe(topic)
 
     def publish(self, topic: str, message: str):
@@ -113,8 +123,7 @@ class MeshQTTHandler:
         """Internal callback for when the MQTT client disconnects."""
         print(f"Disconnected from {self.broker} with return code {rc}")
 
-    from ._receive import (_decrypt_message, _on_message,
-                           _process_decrypted_message)
+    from ._receive import _decrypt_message, _on_message, _process_decrypted_message
 
 
 if __name__ == "__main__":
@@ -124,6 +133,7 @@ if __name__ == "__main__":
         port=1883,
         username="meshdev",
         password="large4cats",
+        root_topic="msh/US",
         db_file="mqtt_data.db",
     )
 
@@ -132,7 +142,7 @@ if __name__ == "__main__":
 
     mqtt_handler.set_message_callback(on_message)
     mqtt_handler.connect()
-    mqtt_handler.subscribe("msh/US")
+    mqtt_handler.subscribe("LongFast", "AQ==")
 
     try:
         while True:
