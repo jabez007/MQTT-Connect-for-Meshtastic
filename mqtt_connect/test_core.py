@@ -91,8 +91,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         result = self.mqtt_handler._decrypt_message(MagicMock(), "invalid_key")
         self.assertIsNone(result)
 
-    @patch("mqtt_connect.core.MeshQTTHandler._decrypt_message")
-    def test_on_message_decrypts_and_processes(self, mock_decrypt_message):
+    def test_on_message_decrypts_and_processes(self):
+        from .core import _receive as mock_receive
+
         # Prepare mocks and test data
         mock_envelope = mqtt_pb2.ServiceEnvelope()
         mock_envelope.packet.id = 12345
@@ -104,17 +105,23 @@ class TestMeshQTTHandler(unittest.TestCase):
         mock_payload.portnum = portnums_pb2.TEXT_MESSAGE_APP
         mock_payload.payload = b"Test Message"
         #
-        mock_decrypt_message.return_value = mock_payload
+        mock_receive._decrypt_message = MagicMock(return_value=mock_payload)
+        mock_receive._process_decrypted_message = MagicMock()
         #
         mock_msg = MagicMock()
         mock_msg.topic = self.mqtt_handler.root_topic + "/2/e/" + "test_topic"
         mock_msg.payload = mock_envelope.SerializeToString()
 
         # Test _on_message
-        self.mqtt_handler._process_decrypted_message = MagicMock()
-        self.mqtt_handler._on_message(None, None, mock_msg)
-        self.mqtt_handler._process_decrypted_message.assert_called_with(
-            mock_payload, mock_envelope, "test_topic"
+        mock_receive._on_message(self.mqtt_handler, None, None, mock_msg)
+        mock_receive._decrypt_message.assert_called_with(
+            self.mqtt_handler, mock_envelope.packet, "AQ=="
+        )
+        mock_receive._process_decrypted_message.assert_called_with(
+            self.mqtt_handler,
+            mock_payload,
+            mock_envelope,
+            "test_topic",
         )
 
     def test_text_message_callback(self):

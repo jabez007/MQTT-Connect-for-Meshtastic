@@ -2,7 +2,7 @@ import random
 from typing import Callable, Dict, Optional
 
 import paho.mqtt.client as mqtt
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, PayloadType
 
 from .database import DatabaseHandler
 
@@ -110,7 +110,7 @@ class MeshQTTClient:
         topic = self.root_topic + "/2/e/" + channel_name + "/#"
         self.client.subscribe(topic)
 
-    def publish(self, channel_name: str, message: str):
+    def publish(self, channel_name: str, message: PayloadType):
         """Publish a message to a given channel."""
         topic = self.root_topic + "/2/e/" + channel_name + "/" + self.node_id
         self.client.publish(topic, message)

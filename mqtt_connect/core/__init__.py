@@ -19,13 +19,8 @@ class MeshQTTHandler(MeshQTTClient):
         )
         self.client.on_message = self._on_message
 
-    from ._receive import (
-        _decrypt_message,
-        _get_channel,
-        _get_key,
-        _on_message,
-        _process_decrypted_message,
-    )
+    from ._receive import (_decrypt_message, _get_channel, _get_key,
+                           _on_message, _process_decrypted_message)
 
 
 if __name__ == "__main__":

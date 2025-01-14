@@ -8,15 +8,11 @@ from .utils import decrypt_message
 
 try:
     from meshtastic import BROADCAST_NUM
-    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
+    from meshtastic.protobuf import (mesh_pb2, mqtt_pb2, portnums_pb2,
+                                     telemetry_pb2)
 except ImportError:
-    from meshtastic import (
-        BROADCAST_NUM,
-        mesh_pb2,
-        mqtt_pb2,
-        portnums_pb2,
-        telemetry_pb2,
-    )
+    from meshtastic import (BROADCAST_NUM, mesh_pb2, mqtt_pb2, portnums_pb2,
+                            telemetry_pb2)
 
 
 def _get_channel(self: MeshQTTClient, topic: str) -> str | None:
@@ -28,14 +24,14 @@ def _get_channel(self: MeshQTTClient, topic: str) -> str | None:
 
 def _get_key(self: MeshQTTClient, topic: str) -> str | None:
     """Get the shared key for a specific topic"""
-    channel_name = self._get_channel(topic)
+    channel_name = _get_channel(self, topic)
     return self.get_key(channel_name if channel_name is not None else "")
 
 
 def _on_message(self: MeshQTTClient, client, userdata, msg: MQTTMessage):
     """Internal callback for when a message is received."""
-    channel_name = self._get_channel(msg.topic)
-    shared_key = self._get_key(msg.topic)
+    channel_name = _get_channel(self, msg.topic)
+    shared_key = _get_key(self, msg.topic)
     try:
         service_envelope = mqtt_pb2.ServiceEnvelope()
         service_envelope.ParseFromString(msg.payload)
@@ -46,14 +42,20 @@ def _on_message(self: MeshQTTClient, client, userdata, msg: MQTTMessage):
                 print(f"No key available for channel: {channel_name}")
                 return
 
-            decrypted_message = self._decrypt_message(packet, shared_key)
+            decrypted_message = _decrypt_message(self, packet, shared_key)
             if decrypted_message:
-                self._process_decrypted_message(
-                    decrypted_message, service_envelope, channel_name
+                _process_decrypted_message(
+                    self,
+                    decrypted_message,
+                    service_envelope,
+                    channel_name if channel_name is not None else "",
                 )
         else:
-            self._process_decrypted_message(
-                packet.decoded, service_envelope, channel_name
+            _process_decrypted_message(
+                self,
+                packet.decoded,
+                service_envelope,
+                channel_name if channel_name is not None else "",
             )
 
     except Exception as e:

@@ -5,15 +5,11 @@ from .utils import encrypt_message, generate_hash
 
 try:
     from meshtastic import BROADCAST_NUM
-    from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2, telemetry_pb2
+    from meshtastic.protobuf import (mesh_pb2, mqtt_pb2, portnums_pb2,
+                                     telemetry_pb2)
 except ImportError:
-    from meshtastic import (
-        BROADCAST_NUM,
-        mesh_pb2,
-        mqtt_pb2,
-        portnums_pb2,
-        telemetry_pb2,
-    )
+    from meshtastic import (BROADCAST_NUM, mesh_pb2, mqtt_pb2, portnums_pb2,
+                            telemetry_pb2)
 
 
 def _send_ack(
@@ -32,7 +28,7 @@ def _send_ack(
 
     service_envelope = mqtt_pb2.ServiceEnvelope()
     service_envelope.packet.CopyFrom(
-        self._generate_mesh_packet(sender_id, ack_message, channel_name)
+        _generate_mesh_packet(self, sender_id, ack_message, channel_name)
     )
     service_envelope.channel_id = channel_name
     service_envelope.gateway_id = self.node_id
@@ -52,13 +48,13 @@ def _generate_mesh_packet(
     setattr(mesh_packet, "from", int(self.node_id.lstrip("!"), 16))
     mesh_packet.to = destination_id
     mesh_packet.want_ack = False
-    mesh_packet.channel = generate_hash(channel_name, key)
+    mesh_packet.channel = generate_hash(channel_name, key if key is not None else "")
     mesh_packet.hop_limit = 3
 
     if key and not key.isspace():
-        mesh_packet.decoded.CopyFrom(meshage)
+        mesh_packet.encrypted = _encrypt_message(self, mesh_packet, key, meshage)
     else:
-        mesh_packet.encrypted = self._encrypt_message(mesh_packet, key, meshage)
+        mesh_packet.decoded.CopyFrom(meshage)
 
     return mesh_packet
 
