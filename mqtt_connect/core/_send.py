@@ -21,6 +21,7 @@ def _send_ack(
         packet_id: The ID of the received packet.
         sender_id: The ID of the sender (node).
     """
+    print(f"Sending ACK for {packet_id} to {sender_id} on {channel_name}")
     ack_message = mesh_pb2.Data()
     ack_message.portnum = portnums_pb2.ROUTING_APP
     ack_message.request_id = packet_id

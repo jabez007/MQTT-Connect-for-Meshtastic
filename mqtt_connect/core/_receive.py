@@ -30,6 +30,7 @@ def _get_key(self: MeshQTTClient, topic: str) -> str | None:
 
 def _on_message(self: MeshQTTClient, client, userdata, msg: MQTTMessage):
     """Internal callback for when a message is received."""
+    print(f"Received MQTT message from {msg.topic}")
     channel_name = _get_channel(self, msg.topic)
     shared_key = _get_key(self, msg.topic)
     try:
@@ -82,6 +83,9 @@ def _process_decrypted_message(
             timestamp = envelope.packet.rx_time
             sender = getattr(envelope.packet, "from")
             content = decoded_message.payload.decode("utf-8")
+            print(
+                f"[{timestamp}]Received message on {channel_name} from {sender}: {content}"
+            )
 
             # Save to database
             self.db.save_message(channel_name, msg_id, timestamp, sender, content)

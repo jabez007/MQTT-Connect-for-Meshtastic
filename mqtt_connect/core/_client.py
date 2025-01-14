@@ -3,6 +3,7 @@ from typing import Callable, Dict, Optional
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import Client, PayloadType
+from paho.mqtt.reasoncodes import ReasonCode
 
 from .database import DatabaseHandler
 
@@ -43,6 +44,7 @@ class MeshQTTClient:
         # Assign callbacks
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
+        self.client.on_subscribe = self._on_subscribe
 
         self.on_connect_callback: Optional[Callable[[str], None]] = None
         self.on_message_callback: Optional[Callable[[str, str, str, int], None]] = None
@@ -108,6 +110,7 @@ class MeshQTTClient:
         """Subscribe to a given channel."""
         self.set_key(channel_name, shared_key)
         topic = self.root_topic + "/2/e/" + channel_name + "/#"
+        print(f"Subscribing to {topic}")
         self.client.subscribe(topic)
 
     def publish(self, channel_name: str, message: PayloadType):
@@ -115,14 +118,26 @@ class MeshQTTClient:
         topic = self.root_topic + "/2/e/" + channel_name + "/" + self.node_id
         self.client.publish(topic, message)
 
-    def _on_connect(self, client, userdata, flags, rc, properties=None):
+    def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         """Internal callback for when the MQTT client connects."""
-        if rc == 0:
+        if reason_code == 0:
+            print(f"Connected to {self.broker}")
             if self.on_connect_callback:
                 self.on_connect_callback(self.broker)
         else:
-            print(f"Failed to connect to {self.broker}, return code {rc}")
+            print(f"Failed to connect to {self.broker}, return code {reason_code}")
 
-    def _on_disconnect(self, client, userdata, rc, properties=None):
+    def _on_subscribe(
+        self, client, userdata, mid, reason_code_list: list[ReasonCode], properties=None
+    ):
+        """Internal callback for when the MQTT client subscribes to a topic"""
+        if any(reason_code.is_failure for reason_code in reason_code_list):
+            print(f"Failed to subscribe, return codes {reason_code_list}")
+        else:
+            print(f"Successfully subscribed")
+
+    def _on_disconnect(
+        self, client, userdata, disconnect_flags, reason_code, properties=None
+    ):
         """Internal callback for when the MQTT client disconnects."""
-        print(f"Disconnected from {self.broker} with return code {rc}")
+        print(f"Disconnected from {self.broker} with return code {reason_code}")
