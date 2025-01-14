@@ -19,10 +19,10 @@ class TestMeshQTTHandler(unittest.TestCase):
             password="pass",
             db_file=":memory:",  # Use in-memory database for tests
         )
-        self.mqtt_handler.set_key("test/topic", "AQ==")
+        self.mqtt_handler.set_key("test_topic", "AQ==")
         self.mqtt_handler.db = MagicMock()
 
-    @patch("mqtt_connect.core.mqtt.Client")
+    @patch("mqtt_connect.core._client.mqtt.Client")
     def test_connect(self, mock_mqtt_client):
         mock_client_instance = mock_mqtt_client.return_value
         self.mqtt_handler.client = mock_client_instance
@@ -31,7 +31,7 @@ class TestMeshQTTHandler(unittest.TestCase):
         mock_client_instance.connect.assert_called_with("mqtt.test.broker", 1883, 60)
         mock_client_instance.loop_start.assert_called()
 
-    @patch("mqtt_connect.core.mqtt.Client")
+    @patch("mqtt_connect.core._client.mqtt.Client")
     def test_disconnect(self, mock_mqtt_client):
         mock_client_instance = mock_mqtt_client.return_value
         self.mqtt_handler.client = mock_client_instance
@@ -107,14 +107,14 @@ class TestMeshQTTHandler(unittest.TestCase):
         mock_decrypt_message.return_value = mock_payload
         #
         mock_msg = MagicMock()
-        mock_msg.topic = "test/topic"
+        mock_msg.topic = self.mqtt_handler.root_topic + "/2/e/" + "test_topic"
         mock_msg.payload = mock_envelope.SerializeToString()
 
         # Test _on_message
         self.mqtt_handler._process_decrypted_message = MagicMock()
         self.mqtt_handler._on_message(None, None, mock_msg)
         self.mqtt_handler._process_decrypted_message.assert_called_with(
-            mock_payload, mock_envelope
+            mock_payload, mock_envelope, "test_topic"
         )
 
     def test_text_message_callback(self):
@@ -132,7 +132,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.mqtt_handler.db.save_message = MagicMock()
 
         # Act
-        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+        self.mqtt_handler._process_decrypted_message(
+            decoded_message, mock_envelope, "test_topic"
+        )
 
         # Assert
         self.mqtt_handler.db.save_message.assert_called_with(
@@ -162,7 +164,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.mqtt_handler.db.save_node_info = MagicMock()
 
         # Act
-        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+        self.mqtt_handler._process_decrypted_message(
+            decoded_message, mock_envelope, "test_topic"
+        )
 
         # Assert
         self.mqtt_handler.db.save_node_info.assert_called_with(
@@ -193,7 +197,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.mqtt_handler.db.save_position = MagicMock()
 
         # Act
-        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+        self.mqtt_handler._process_decrypted_message(
+            decoded_message, mock_envelope, "test_topic"
+        )
 
         # Assert
         self.mqtt_handler.db.save_position.assert_called_with(
@@ -224,7 +230,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.mqtt_handler.db.save_telemetry = MagicMock()
 
         # Act
-        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+        self.mqtt_handler._process_decrypted_message(
+            decoded_message, mock_envelope, "test_topic"
+        )
 
         # Assert
         self.mqtt_handler.db.save_telemetry.assert_called_with(
@@ -258,7 +266,9 @@ class TestMeshQTTHandler(unittest.TestCase):
         self.mqtt_handler.db.save_telemetry = MagicMock()
 
         # Act
-        self.mqtt_handler._process_decrypted_message(decoded_message, mock_envelope)
+        self.mqtt_handler._process_decrypted_message(
+            decoded_message, mock_envelope, "test_topic"
+        )
 
         # Assert
         self.mqtt_handler.db.save_telemetry.assert_called_with(
