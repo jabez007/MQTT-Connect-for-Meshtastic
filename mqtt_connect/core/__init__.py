@@ -39,8 +39,10 @@ if __name__ == "__main__":
         db_file="mqtt_data.db",
     )
 
-    def on_message(sender, content, timestamp):
-        print(f"[{timestamp}]Received message from {sender}: {content}")
+    def on_message(channel_name, sender, content, timestamp):
+        print(
+            f"[{timestamp}]Received message on {channel_name} from {sender}: {content}"
+        )
 
     mqtt_handler.set_message_callback(on_message)
     mqtt_handler.connect()

@@ -45,7 +45,7 @@ class MeshQTTClient:
         self.client.on_disconnect = self._on_disconnect
 
         self.on_connect_callback: Optional[Callable[[str], None]] = None
-        self.on_message_callback: Optional[Callable[[str, str, int], None]] = None
+        self.on_message_callback: Optional[Callable[[str, str, str, int], None]] = None
         self.on_nodeinfo_callback: Optional[Callable[[str, str, str], None]] = None
         self.on_position_callback: Optional[
             Callable[[str, float, float, int], None]
@@ -67,7 +67,7 @@ class MeshQTTClient:
         """Set a callback to handle successful connections."""
         self.on_connect_callback = callback
 
-    def set_message_callback(self, callback: Callable[[str, str, int], None]):
+    def set_message_callback(self, callback: Callable[[str, str, str, int], None]):
         """Set a callback to handle incoming text message."""
         self.on_message_callback = callback
 
@@ -110,8 +110,9 @@ class MeshQTTClient:
         topic = self.root_topic + "/2/e/" + channel_name + "/#"
         self.client.subscribe(topic)
 
-    def publish(self, topic: str, message: str):
-        """Publish a message to a given topic."""
+    def publish(self, channel_name: str, message: str):
+        """Publish a message to a given channel."""
+        topic = self.root_topic + "/2/e/" + channel_name + "/" + self.node_id
         self.client.publish(topic, message)
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):

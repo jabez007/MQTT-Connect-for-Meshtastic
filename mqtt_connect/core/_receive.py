@@ -3,6 +3,7 @@ import re
 from paho.mqtt.client import MQTTMessage
 
 from ._client import MeshQTTClient
+from ._send import _send_ack
 from .utils import decrypt_message
 
 try:
@@ -81,11 +82,13 @@ def _process_decrypted_message(
             content = decoded_message.payload.decode("utf-8")
 
             # Save to database
-            self.db.save_message(msg_id, timestamp, sender, content)
+            self.db.save_message(channel_name, msg_id, timestamp, sender, content)
 
             # process_message(mp, text_payload, is_encrypted)
+            if envelope.packet.want_ack:
+                _send_ack(self, msg_id, sender, channel_name)
             if self.on_message_callback:
-                self.on_message_callback(sender, content, timestamp)
+                self.on_message_callback(channel_name, sender, content, timestamp)
 
         case portnums_pb2.NODEINFO_APP:
             node_info = mesh_pb2.User()

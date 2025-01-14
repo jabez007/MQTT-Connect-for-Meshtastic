@@ -16,10 +16,12 @@ class DatabaseHandler:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS messages (
-                    msg_id INTEGER PRIMARY KEY,
+                    channel_name TEXT NOT NULL,
+                    msg_id INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
                     sender TEXT NOT NULL,
-                    content TEXT NOT NULL
+                    content TEXT NOT NULL,
+                    PRIMARY KEY (channel_name, msg_id)
                 )
                 """
             )
@@ -73,22 +75,24 @@ class DatabaseHandler:
             )
 
     # Message Operations
-    def save_message(self, msg_id: int, timestamp: int, sender: str, content: str):
+    def save_message(
+        self, channel_name: str, msg_id: int, timestamp: int, sender: str, content: str
+    ):
         """Save a received message."""
         with sqlite3.connect(self.db_file) as conn:
             conn.execute(
                 """
-                INSERT OR IGNORE INTO messages (msg_id, timestamp, sender, content)
-                VALUES (?, ?, ?, ?)
+                INSERT OR IGNORE INTO messages (channel_name, msg_id, timestamp, sender, content)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (msg_id, timestamp, sender, content),
+                (channel_name, msg_id, timestamp, sender, content),
             )
 
-    def get_message_history(self) -> List[Tuple[int, int, str, str]]:
+    def get_message_history(self) -> List[Tuple[str, int, int, str, str]]:
         """Retrieve all messages from the database."""
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.execute(
-                "SELECT msg_id, timestamp, sender, content FROM messages ORDER BY timestamp DESC"
+                "SELECT channel_name, msg_id, timestamp, sender, content FROM messages ORDER BY timestamp DESC"
             )
             return cursor.fetchall()
 

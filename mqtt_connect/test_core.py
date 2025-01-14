@@ -138,9 +138,10 @@ class TestMeshQTTHandler(unittest.TestCase):
 
         # Assert
         self.mqtt_handler.db.save_message.assert_called_with(
-            987, 1673342400, 123456, "Hello, World!"
+            "test_topic", 987, 1673342400, 123456, "Hello, World!"
         )
         callback.assert_called_once_with(
+            "test_topic",  # Channel Name
             123456,  # Sender
             "Hello, World!",  # Message content
             1673342400,  # Timestamp
