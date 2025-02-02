@@ -4,6 +4,8 @@ from textual.widgets import Tree
 
 class NodeList(VerticalScroll):
 
+    can_focus = True
+
     def __init__(self, id: str = "node-list", *args, **kwargs):
         super().__init__(id=id, *args, **kwargs)
         self.nodes = (

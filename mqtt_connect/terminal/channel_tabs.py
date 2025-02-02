@@ -8,9 +8,11 @@ class ChannelTabs(Vertical):
     """A tabbed view for channels and their messages."""
 
     BINDINGS = [
-        Binding("]", "next_tab", "Next Tab"),
-        Binding("[", "prev_tab", "Previous Tab"),
+        Binding("[", "prev_tab", "Previous Channel"),
+        Binding("]", "next_tab", "Next Channel"),
     ]
+
+    can_focus = True
 
     def __init__(self, id: str = "channel-tabs", *args, **kwargs):
         super().__init__(id=id, *args, **kwargs)
@@ -21,6 +23,10 @@ class ChannelTabs(Vertical):
         self.tab_content = TabbedContent()
         yield self.tab_content
         self.log("🔹 DEBUG: ChannelTabs Content initialized")
+
+    def on_mount(self):
+        """Make sure at least one channel is set"""
+        self.add_tab("LongFast")
 
     def add_tab(self, channel_name: str):
         """Add a new tab for a channel if it doesn't already exist."""
@@ -69,4 +75,4 @@ class ChannelTabs(Vertical):
 
     async def on_key(self, event: Key):
         """Handle <number>gt to switch to a specific tab."""
-        self.log(f"🔹 DEBUG: Switching to specific tab")
+        self.log(f"🔹 DEBUG: Switching to specific tab {event}")
