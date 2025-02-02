@@ -1,7 +1,7 @@
 from textual import on
 from textual.app import App, Binding, ComposeResult
 from textual.containers import Horizontal
-from textual.widgets import Footer, Header, Tabs
+from textual.widgets import Footer, Header
 
 from ..core import MeshQTTHandler
 from .channel_name_modal import ChannelNameModal
@@ -11,15 +11,18 @@ from .node_list import NodeList
 
 class MeshQTTerminal(App):
     CSS = """
-    LeftPane {
+    NodeList {
         width: 30%;
     }
-    MainPane {
+    ChannelTabs {
         width: 70%;
     }
-    TextBox {
-        height: 3;
-        width: 100%;
+    #dialog {
+        padding: 0 1;
+        width: 60;
+        height: 11;
+        border: thick $background 80%;
+        background: $surface;
     }
     """
 
@@ -30,8 +33,8 @@ class MeshQTTerminal(App):
     def __init__(self, mqtt_handler: MeshQTTHandler | None = None):
         super().__init__()
         self.mqtt_handler = mqtt_handler
-        self.nodes_list = NodeList(classes="LeftPane")
-        self.channel_tabs = ChannelTabs(classes="MainPane")
+        self.nodes_list = NodeList()
+        self.channel_tabs = ChannelTabs()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -43,7 +46,7 @@ class MeshQTTerminal(App):
 
     async def action_new_tab(self):
         """Prompt the user for a channel name before creating a new tab."""
-        await self.push_screen(ChannelNameModal())
+        await self.push_screen(ChannelNameModal(id="dialog"))
 
     @on(ChannelNameModal.ChannelNameEntered)
     def add_new_tab(self, message: ChannelNameModal.ChannelNameEntered):
