@@ -1,0 +1,9 @@
+ChannelTabs {
+    .messages-title {
+        background: $panel;
+        border: tall $primary;
+        width: 100%;
+        align: center middle;
+        content-align: center middle;
+    }
+}

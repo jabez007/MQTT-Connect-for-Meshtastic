@@ -8,28 +8,6 @@ from textual.widgets import Button, Input, Label
 class ChannelNameModal(ModalScreen):
     """A modal for entering a new channel name."""
 
-    CSS = """
-    Horizontal {
-        width: 100%;
-        margin: 3;
-        align: center middle;
-        content-align: center middle;
-    }
-    Label {
-        width: 20%;
-        align: center middle;
-        content-align: center middle; 
-    }
-    Input {
-        width: 80%;
-        align: center middle;
-        content-align: center middle;
-    }
-    Button {
-        margin: 3;
-    }
-    """
-
     class ChannelNameEntered(Message):
         """Message sent when a channel name is entered."""
 
@@ -40,13 +18,22 @@ class ChannelNameModal(ModalScreen):
     def compose(self):
         """Define UI elements."""
         yield Vertical(
-            Horizontal(Label("Enter channel name:"), Input(id="channel_name_input")),
-            Horizontal(Button("Create", id="create"), Button("Cancel", id="cancel")),
+            Horizontal(
+                Label("Enter channel name:"),
+                Input(id="channel-name-input"),
+                id="channel-name-input-horizontal",
+            ),
+            Horizontal(
+                Button("Create", id="create"),
+                Button("Cancel", id="cancel"),
+                id="channel-name-button-horizontal",
+            ),
+            id="channel-name-modal",
         )
 
     def on_mount(self):
         """Focus the input box when the screen appears."""
-        self.query_one("#channel_name_input", Input).focus()
+        self.query_one("#channel-name-input", Input).focus()
 
     def on_input_submitted(self, event: Input.Submitted):
         self.log(f"🔹 DEBUG: Caught submit event [{event.value}]")
@@ -63,7 +50,7 @@ class ChannelNameModal(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed):
         """Handle button clicks."""
         if event.button.id == "create":
-            channel_name = self.query_one("#channel_name_input", Input).value.strip()
+            channel_name = self.query_one("#channel-name-input", Input).value.strip()
             if channel_name:
                 self.dismiss()
                 self.post_message(self.ChannelNameEntered(channel_name))

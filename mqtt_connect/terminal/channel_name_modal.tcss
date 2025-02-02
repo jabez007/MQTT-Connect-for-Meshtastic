@@ -1,0 +1,38 @@
+ChannelNameModal{
+    align: center middle;
+
+    Horizontal {
+        width: 100%;
+        margin: 3;
+        align: center middle;
+        content-align: center middle;
+
+        &#channel-name-input-horizontal {
+            height: 3;
+        
+            Label {
+                width: 20%;
+                height: 100%;
+                align: center middle;
+                content-align: center middle; 
+            }
+            Input {
+                width: 80%;
+                height: 100%;
+                align: center middle;
+                content-align: center middle;
+            }
+ 
+        }
+
+        &#channel-name-button-horizontal {
+            height: 7;
+         
+            Button {
+                margin: 3;
+                align: center middle;
+                content-align: center middle;
+            }        
+        }
+    }
+}

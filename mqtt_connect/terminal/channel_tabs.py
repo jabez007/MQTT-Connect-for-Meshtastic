@@ -1,5 +1,6 @@
 from textual.app import Binding, ComposeResult
 from textual.containers import Vertical
+from textual.events import Key
 from textual.widgets import Label, TabbedContent, TabPane
 
 
@@ -7,8 +8,8 @@ class ChannelTabs(Vertical):
     """A tabbed view for channels and their messages."""
 
     BINDINGS = [
-        Binding("] b", "next_tab", "Next Tab"),
-        Binding("[ b", "prev_tab", "Previous Tab"),
+        Binding("]", "next_tab", "Next Tab"),
+        Binding("[", "prev_tab", "Previous Tab"),
     ]
 
     def __init__(self, id: str = "channel-tabs", *args, **kwargs):
@@ -29,7 +30,9 @@ class ChannelTabs(Vertical):
             new_pane = TabPane(f"{channel_name}", id=new_pane_id)
 
             self.tab_content.add_pane(new_pane)
-            new_pane.mount(Label(f"Messages for {channel_name}"))
+            new_pane.mount(
+                Label(f"Messages on {channel_name}", classes="messages-title")
+            )
 
             self.tabs_data[channel_name] = []
             self.tab_index.append(new_pane_id)
@@ -47,11 +50,23 @@ class ChannelTabs(Vertical):
     async def action_next_tab(self):
         """Switch to the next tab (]b)."""
         self.log(f"🔹 DEBUG: Switching to next tab")
+        if not self.tab_index:
+            return
+
+        current_index = self.tab_index.index(self.tab_content.active)
+        next_index = (current_index + 1) % len(self.tab_index)  # Wrap around
+        self.tab_content.active = self.tab_index[next_index]
 
     async def action_prev_tab(self):
         """Switch to the previous tab ([b)."""
         self.log(f"🔹 DEBUG: Switching to previous tab")
+        if not self.tab_index:
+            return
 
-    async def key(self, event):
+        current_index = self.tab_index.index(self.tab_content.active)
+        prev_index = (current_index - 1) % len(self.tab_index)  # Wrap around
+        self.tab_content.active = self.tab_index[prev_index]
+
+    async def on_key(self, event: Key):
         """Handle <number>gt to switch to a specific tab."""
         self.log(f"🔹 DEBUG: Switching to specific tab")

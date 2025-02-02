@@ -1,0 +1,22 @@
+MeshQTTerminal {
+    Horizontal#main {
+        align: center middle;
+    
+        NodeList {
+            width: 29%;
+            margin: 1;
+        }
+        ChannelTabs {
+            width: 67%;
+            margin: 1;
+        }
+    }
+    #channel-name-modal {
+        padding: 0 1;
+        width: 107;
+        height: 17;
+        border: thick $background 80%;
+        background: $surface;
+    }
+}
+
