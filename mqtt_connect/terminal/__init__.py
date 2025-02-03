@@ -1,12 +1,12 @@
 from textual import on
 from textual.app import App, Binding, ComposeResult
 from textual.containers import Horizontal
-from textual.events import Key
 from textual.widgets import Footer, Header
 
 from ..core import MeshQTTHandler
 from .channel_name_modal import ChannelNameModal
 from .channel_tabs import ChannelTabs
+from .connection_settings_modal import ConnectionSettingsModal
 from .node_list import NodeList
 
 
@@ -14,7 +14,8 @@ class MeshQTTerminal(App):
     CSS_PATH = ["MeshQTTerminal.tcss", "channel_name_modal.tcss", "channel_tabs.tcss"]
 
     BINDINGS = [
-        Binding("ctrl+n", "new_tab", "New Channel"),
+        Binding("ctrl+s", "connect_server", "Connect to server"),
+        Binding("ctrl+n", "new_tab", "Subscribe to channel"),
         Binding("<", "focus_left", "Shift focus left"),
         Binding(">", "focus_right", "Shift focus right"),
     ]
@@ -38,8 +39,14 @@ class MeshQTTerminal(App):
         self.set_focus(self.channel_tabs)
         # self.log(f"🔹 DEBUG: Current active bindings {self.active_bindings}")
 
+    async def action_connect_server(self):
+        """Prompt the user for server connection settings."""
+        self.log(f"🔹 DEBUG: Popping server connection modal.")
+        await self.push_screen(ConnectionSettingsModal())
+
     async def action_new_tab(self):
         """Prompt the user for a channel name before creating a new tab."""
+        self.log(f"🔹 DEBUG: Popping channel name modal.")
         await self.push_screen(ChannelNameModal())
 
     @on(ChannelNameModal.ChannelNameEntered)
