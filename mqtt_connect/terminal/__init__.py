@@ -11,7 +11,12 @@ from .node_list import NodeList
 
 
 class MeshQTTerminal(App):
-    CSS_PATH = ["MeshQTTerminal.tcss", "channel_name_modal.tcss", "channel_tabs.tcss"]
+    CSS_PATH = [
+        "MeshQTTerminal.tcss",
+        "connection_settings_modal.tcss",
+        "channel_name_modal.tcss",
+        "channel_tabs.tcss",
+    ]
 
     BINDINGS = [
         Binding("ctrl+s", "connect_server", "Connect to server"),

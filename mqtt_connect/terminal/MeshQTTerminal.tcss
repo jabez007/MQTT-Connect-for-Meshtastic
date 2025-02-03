@@ -18,5 +18,12 @@ MeshQTTerminal {
         border: thick $background 80%;
         background: $surface;
     }
+    #connection-settings-modal {
+        padding: 0 1;
+        width: 53%;
+        height: 23;
+        border: thick $background 80%;
+        background: $surface;
+    }
 }
 

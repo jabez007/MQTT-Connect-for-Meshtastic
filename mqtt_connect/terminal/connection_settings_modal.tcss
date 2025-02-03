@@ -1,0 +1,67 @@
+ConnectionSettingsModal{
+    align: center middle;
+
+    Horizontal {
+        width: 100%; 
+        align: center middle;
+        content-align: center middle;
+
+        Label {
+            width: 20%;
+            height: 100%;
+            align: center middle;
+            content-align: center middle; 
+        }
+
+        Input {
+            width: 80%;
+            height: 100%;
+            align: center middle;
+            content-align: center middle;
+
+        }
+
+        &#connection-settings-hostname-port-input-horizontal {
+           margin: 1;
+           height: 3;
+            
+           #connection-settings-hostname-input-vertical {
+               width: 47;
+           }
+
+           #connection-settings-port-input-vertical {
+               width: 23;
+           }
+
+        }
+
+        &#connection-settings-username-password-input-horizontal {
+           margin: 1;
+           height: 3;
+            
+           #connection-settings-username-input-vertical {
+               width: 41;
+           }
+
+           #connection-settings-password-input-vertical {
+               width: 41;
+           }
+
+        }
+
+        &#connection-settings-root-topic-input-horizontal {
+           margin: 1;
+           height: 3;
+        }
+
+         &#connection-settings-button-horizontal {
+            height: 7;
+         
+            Button {
+                margin: 3;
+                align: center middle;
+                content-align: center middle;
+            }        
+        }
+    }
+}

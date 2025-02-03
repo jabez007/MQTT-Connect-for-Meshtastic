@@ -21,8 +21,7 @@ ChannelNameModal{
                 height: 100%;
                 align: center middle;
                 content-align: center middle;
-            }
- 
+            } 
         }
 
         &#channel-name-button-horizontal {
